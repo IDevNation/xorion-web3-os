@@ -9,7 +9,7 @@ use protocol::{WalletRequest, WalletResponse};
 
 /// Socket path used for development on Linux/macOS.
 /// On Redox this is replaced by the `:wallet` scheme registration.
-const "127.0.0.1:8080": &str = "/tmp/xorion-wallet.sock";
+const SOCKET_ADDR: &str = "/tmp/xorion-wallet.sock";
 
 fn main() {
     env_logger::init();

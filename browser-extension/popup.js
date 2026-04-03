@@ -171,16 +171,16 @@ var WORD_LIST = [
   'soft', 'solar', 'soldier', 'solid', 'solution', 'solve', 'someone', 'song', 'soon', 'sorry',
   'sort', 'soul', 'sound', 'soup', 'source', 'south', 'space', 'spare', 'speak', 'special',
   'speed', 'spell', 'spend', 'sphere', 'spice', 'spider', 'spike', 'spin', 'spirit', 'split',
-  'spoke', 'sponsor', 'spoon', 'sport', 'spot', 'spray', 'spread', 'spring', 'spy', 'square',
+  'spoil', 'sponsor', 'spoon', 'sport', 'spot', 'spray', 'spread', 'spring', 'spy', 'square',
   'squeeze', 'squirrel', 'stable', 'stadium', 'staff', 'stage', 'stairs', 'stamp', 'stand', 'start',
   'state', 'stay', 'steak', 'steel', 'stem', 'step', 'stereo', 'stick', 'still', 'sting',
   'stock', 'stomach', 'stone', 'stool', 'story', 'stove', 'strategy', 'street', 'strike', 'strong',
   'struggle', 'student', 'stuff', 'stumble', 'style', 'subject', 'submit', 'subway', 'success', 'such',
   'sudden', 'suffer', 'sugar', 'suggest', 'suit', 'summer', 'sun', 'sunny', 'sunset', 'super',
   'supply', 'supreme', 'sure', 'surface', 'surge', 'surprise', 'surround', 'survey', 'suspect', 'sustain',
-  'swallow', 'swamp', 'swap', 'swear', 'sweet', 'swift', 'swim', 'swing', 'switch', 'sword',
-  'symbol', 'symptom', 'syrup', 'system', 'table', 'tackle', 'tag', 'tail', 'talent', 'talk',
-  'tank', 'tape', 'target', 'task', 'taste', 'tattoo', 'taxi', 'teach', 'team', 'tell',
+  'swallow', 'swamp', 'swap', 'swarm', 'swear', 'sweet', 'swift', 'swim', 'swing', 'switch',
+  'sword', 'symbol', 'symptom', 'syrup', 'system', 'table', 'tackle', 'tag', 'tail', 'talent',
+  'talk', 'tank', 'tape', 'target', 'task', 'taste', 'taxi', 'teach', 'team', 'tell',
   'ten', 'tenant', 'tennis', 'tent', 'term', 'test', 'text', 'thank', 'that', 'theme',
   'then', 'theory', 'there', 'they', 'thing', 'this', 'thought', 'three', 'thrive', 'throw',
   'thumb', 'thunder', 'ticket', 'tide', 'tiger', 'tilt', 'timber', 'time', 'tiny', 'tip',
@@ -244,7 +244,6 @@ function showScreen(screenId) {
 async function initWallet() {
   try {
     var data = await chrome.storage.local.get(['isLocked', 'hasWallet']);
-    
     if (data.hasWallet && data.isLocked) {
       showScreen('lock-screen');
     } else if (data.hasWallet) {
@@ -263,7 +262,6 @@ async function createWallet() {
   var password = document.getElementById('create-password').value;
   var confirmPassword = document.getElementById('confirm-password').value;
   var errorEl = document.getElementById('create-error');
-  var seedDisplay = document.getElementById('seed-display');
   
   errorEl.textContent = '';
   
@@ -277,7 +275,7 @@ async function createWallet() {
     return;
   }
   
-  var seedPhrase = seedDisplay.textContent;
+  var seedPhrase = document.getElementById('seed-display').textContent;
   var address = generateAddress(seedPhrase);
   
   await chrome.storage.local.set({

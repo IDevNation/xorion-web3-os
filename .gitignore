@@ -1,2 +1,1 @@
-Nothing needs to be added to .gitignore since only a markdown file (AGENTS.md) was added, which is a source/config file and should not be ignored./target/ 
-/target/ 
+Nothing needs to be added to .gitignore since the changes only include source files (.md, .json, .html, .js) without any build artifacts, dependencies, or temporary files.

@@ -1,159 +1,361 @@
-// XOS Wallet - Complete Fixed Script (v2.0)
-var isUnlocked = false;
-var currentSeed = "";
-var walletAddress = "";
+﻿var wallets = [];
+var currentWalletId = null;
+var currentNetwork = 'xos-mainnet';
 
-function getEl(id) { 
-  return document.getElementById(id); 
+function getEl(id) { return document.getElementById(id); }
+
+function saveData() {
+  var theme = document.documentElement.getAttribute('data-theme');
+  chrome.storage.local.set({ 
+    wallets: wallets, 
+    currentWalletId: currentWalletId, 
+    theme: theme,
+    currentNetwork: currentNetwork
+  });
+}
+
+function loadData() {
+  chrome.storage.local.get(['wallets', 'currentWalletId', 'theme', 'currentNetwork'], function(res) {
+    if (res.theme === 'dark') toggleTheme(true);
+    if (res.currentNetwork) currentNetwork = res.currentNetwork;
+    
+    if (res.wallets && res.wallets.length > 0) {
+      wallets = res.wallets;
+      if (res.currentWalletId) {
+        currentWalletId = res.currentWalletId;
+        showScreen('dashboard-screen');
+        updateDashboard();
+      } else {
+        showScreen('lock-screen');
+      }
+    } else {
+      showScreen('welcome-screen');
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  checkWalletStatus();
+  loadData();
+
+  if(getEl('theme-toggle')) getEl('theme-toggle').onclick = function() { toggleTheme(); };
+  
+  if(getEl('btn-create')) getEl('btn-create').onclick = function() { generateSeed(); showScreen('create-screen'); };
+  if(getEl('btn-import')) getEl('btn-import').onclick = function() { showScreen('import-screen'); };
+  
+  if(getEl('btn-back-create')) getEl('btn-back-create').onclick = function() { showScreen('welcome-screen'); };
+  if(getEl('btn-back-import')) getEl('btn-back-import').onclick = function() { showScreen('welcome-screen'); };
+  
+  if(getEl('btn-save-new')) getEl('btn-save-new').onclick = createWallet;
+  if(getEl('btn-save-import')) getEl('btn-save-import').onclick = importWallet;
+  
+  if(getEl('btn-lock')) getEl('btn-lock').onclick = lockWallet;
+  if(getEl('btn-unlock')) getEl('btn-unlock').onclick = unlockWallet;
+  
+  if(getEl('btn-copy')) getEl('btn-copy').onclick = copyAddress;
+  if(getEl('btn-send')) getEl('btn-send').onclick = sendTransaction;
+  if(getEl('btn-receive')) getEl('btn-receive').onclick = function() { showScreen('receive-screen'); generateQR(); };
+  if(getEl('btn-back-receive')) getEl('btn-back-receive').onclick = function() { showScreen('dashboard-screen'); };
+  if(getEl('btn-copy-recv')) getEl('btn-copy-recv').onclick = copyAddress;
+  
+  if(getEl('btn-new-wallet')) getEl('btn-new-wallet').onclick = function() { generateSeed(); showScreen('create-screen'); };
+  if(getEl('btn-delete-wallet')) getEl('btn-delete-wallet').onclick = deleteWallet;
+  if(getEl('wallet-selector')) getEl('wallet-selector').onchange = function(e) { currentWalletId = e.target.value; saveData(); updateDashboard(); };
+  if(getEl('network-selector')) getEl('network-selector').onchange = function(e) { 
+    currentNetwork = e.target.value; 
+    saveData(); 
+    updateDashboard(); 
+  };
 });
 
-function checkWalletStatus() {
-  chrome.storage.local.get(['unlocked', 'address'], function(result) {
-    if (result.unlocked && result.address) {
-      isUnlocked = true;
-      walletAddress = result.address;
-      showScreen('dashboard');
-      updateDashboard();
-    } else {
-      showScreen('welcome');
-    }
-  });
+function toggleTheme(forceDark) {
+  var html = document.documentElement;
+  var isDark = (forceDark !== undefined) ? forceDark : (html.getAttribute('data-theme') !== 'dark');
+  html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  var btn = getEl('theme-toggle');
+  if(btn) btn.innerText = isDark ? '☀️' : '🌙';
+  if (forceDark === undefined) saveData();
 }
 
-function showScreen(screenId) {
-  var screens = ['welcome', 'create-wallet', 'import-wallet', 'set-password', 'enter-password', 'dashboard'];
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
   for (var i = 0; i < screens.length; i++) {
-    if (getEl(screens[i])) {
-      getEl(screens[i]).style.display = 'none';
-    }
+    screens[i].classList.remove('active');
   }
-  if (getEl(screenId)) {
-    getEl(screenId).style.display = 'block';
-  }
+  var target = getEl(id);
+  if(target) target.classList.add('active');
 }
 
 function generateSeed() {
-  var words = ["abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse", "access", "accident", "account", "achieve", "acid", "acoustic", "acquire", "across", "act", "action", "actor", "actress", "actual", "adapt", "add", "addict", "address", "adjust", "admit", "adult", "advance", "advice", "aerobic", "affair", "afford", "afraid", "again", "age", "agent", "agree", "ahead", "aim", "air", "airport", "aisle", "alarm", "album", "alcohol", "alert", "alien", "all", "alley", "allow", "almost", "alone", "alpha", "already", "also", "alter", "always", "amateur", "amazing", "among", "amount", "amused", "analyst", "anchor", "ancient", "anger", "angle", "angry", "animal", "ankle", "announce", "annual", "another", "answer", "antenna", "antique", "anxiety", "any", "apart", "apology", "appear", "apple", "approve", "april", "arch", "arctic", "area", "arena", "argue", "arm", "armed", "armor", "army", "around", "arrange", "arrest", "arrive", "arrow", "art", "artefact", "artist", "artwork", "ask", "aspect", "assault", "asset", "assist", "assume", "asthma", "athlete", "atom", "attack", "attend", "attitude", "attract", "auction", "audit", "august", "aunt", "author", "auto", "autumn", "average", "avocado", "avoid", "awake", "aware", "away", "awesome", "awful", "awkward", "axis"];
-  var seed = [];
+  var words = ['abandon','ability','able','about','above','absent','absorb','abstract','absurd','abuse','access','accident','account','achieve','acid','acoustic','acquire','across','act','action','actor','actress','actual','adapt','add','addict','address','adjust','admit','adult','advance','advice','aerobic','affair','afford','afraid','again','age','agent','agree','ahead','aim','air','airport','aisle','alarm','album','alcohol','alert','alien','all','alley','allow','almost','alone','alpha','already','also','alter','always','amateur','amazing','among','amount','amused','analyst','anchor','ancient','anger','angle','angry','animal','ankle','announce','annual','another','answer','antenna','antique','anxiety','any','apart','apology','appear','apple','approve','april','arch','arctic','area','arena','argue','arm','armed','armor','army','around','arrange','arrest','arrive','arrow','art','artefact','artist','artwork','ask','aspect','assault','asset','assist','assume','asthma','athlete','atom','attack','attend','attitude','attract','auction','audit','august','aunt','author','auto','autumn','average','avocado','avoid','awake','aware','away','awesome','awful','awkward','axis'];
+  var arr = [];
   for (var i = 0; i < 12; i++) {
-    seed.push(words[Math.floor(Math.random() * words.length)]);
+    arr.push(words[Math.floor(Math.random() * words.length)]);
   }
-  return seed.join(" ");
+  var seedStr = arr.join(' ');
+  var disp = getEl('seed-display');
+  if(disp) disp.innerText = seedStr;
+  return seedStr;
 }
 
 function createWallet() {
-  currentSeed = generateSeed();
-  var seedDisplay = getEl('new-seed-display');
-  if(seedDisplay) seedDisplay.innerText = currentSeed;
-  showScreen('set-password');
-}
-
-function saveNewWallet() {
-  var passEl = getEl('new-password');
-  var confirmEl = getEl('confirm-password');
+  var p1 = getEl('new-pass').value;
+  var p2 = getEl('confirm-pass').value;
+  if (p1 !== p2 || p1.length < 4) { alert('Password mismatch or too short!'); return; }
   
-  if (!passEl || !confirmEl) return;
+  var seed = getEl('seed-display').innerText;
+  var newWallet = {
+    id: Date.now().toString(),
+    name: 'Wallet ' + (wallets.length + 1),
+    password: p1,
+    networks: {
+      'xos-mainnet': { address: 'XOS' + Math.random().toString(36).substring(2,10).toUpperCase(), balance: 1000.00, txs: [], symbol: 'XOR' },
+      'xos-testnet': { address: 'tXOS' + Math.random().toString(36).substring(2,10).toUpperCase(), balance: 500.00, txs: [], symbol: 'tXOR' },
+      'eth': { address: '0x' + Math.random().toString(16).substring(2,10), balance: 0.00, txs: [], symbol: 'ETH' },
+      'bsc': { address: '0x' + Math.random().toString(16).substring(2,10), balance: 0.00, txs: [], symbol: 'BNB' }
+    },
+    seed: seed
+  };
   
-  var password = passEl.value;
-  var confirm = confirmEl.value;
-  
-  if (password !== confirm) {
-    alert("Passwords do not match!");
-    return;
-  }
-  if (password.length < 4) {
-    alert("Password must be at least 4 characters");
-    return;
-  }
-  
-  walletAddress = "XOS" + Math.random().toString(36).substring(2, 10).toUpperCase() + "...";
-  
-  chrome.storage.local.set({
-    unlocked: true,
-    address: walletAddress,
-    seed: currentSeed,
-    password: password
-  }, function() {
-    isUnlocked = true;
-    showScreen('dashboard');
-    updateDashboard();
-  });
+  wallets.push(newWallet);
+  currentWalletId = newWallet.id;
+  saveData();
+  updateDashboard();
+  showScreen('dashboard-screen');
+  getEl('new-pass').value = '';
+  getEl('confirm-pass').value = '';
 }
 
 function importWallet() {
-  var seedEl = getEl('import-seed');
-  if (!seedEl) return;
+  var seed = getEl('import-seed-input').value.trim();
+  var pass = getEl('import-pass').value;
+  if (seed.split(' ').length !== 12) { alert('Invalid seed (must be 12 words)'); return; }
+  if (pass.length < 4) { alert('Password too short'); return; }
   
-  var seedInput = seedEl.value.trim();
-  var words = seedInput.split(/\s+/);
+  var newWallet = {
+    id: Date.now().toString(),
+    name: 'Imported ' + (wallets.length + 1),
+    password: pass,
+    networks: {
+      'xos-mainnet': { address: 'XOS' + Math.random().toString(36).substring(2,10).toUpperCase(), balance: 0.00, txs: [], symbol: 'XOR' },
+      'xos-testnet': { address: 'tXOS' + Math.random().toString(36).substring(2,10).toUpperCase(), balance: 0.00, txs: [], symbol: 'tXOR' },
+      'eth': { address: '0x' + Math.random().toString(16).substring(2,10), balance: 0.00, txs: [], symbol: 'ETH' },
+      'bsc': { address: '0x' + Math.random().toString(16).substring(2,10), balance: 0.00, txs: [], symbol: 'BNB' }
+    },
+    seed: seed
+  };
   
-  if (words.length !== 12) {
-    alert("Please enter exactly 12 words.");
-    return;
-  }
-  currentSeed = seedInput;
-  showScreen('set-password');
+  wallets.push(newWallet);
+  currentWalletId = newWallet.id;
+  saveData();
+  updateDashboard();
+  showScreen('dashboard-screen');
+  getEl('import-seed-input').value = '';
+  getEl('import-pass').value = '';
 }
 
-function unlockWallet() {
-  var passEl = getEl('unlock-password');
-  if (!passEl) return;
+function deleteWallet() {
+  if (wallets.length <= 1) { alert('Cannot delete the only wallet!'); return; }
+  if (!confirm('Are you sure? This cannot be undone.')) return;
   
-  var password = passEl.value;
-  
-  chrome.storage.local.get(['password', 'address', 'seed'], function(result) {
-    if (password === result.password) {
-      isUnlocked = true;
-      walletAddress = result.address;
-      currentSeed = result.seed;
-      chrome.storage.local.set({ unlocked: true });
-      showScreen('dashboard');
-      updateDashboard();
-    } else {
-      alert("Incorrect password!");
-    }
-  });
+  var newWallets = [];
+  for (var i = 0; i < wallets.length; i++) {
+    if (wallets[i].id !== currentWalletId) newWallets.push(wallets[i]);
+  }
+  wallets = newWallets;
+  currentWalletId = wallets[0].id;
+  saveData();
+  updateDashboard();
 }
 
 function lockWallet() {
-  isUnlocked = false;
-  walletAddress = "";
-  chrome.storage.local.set({ unlocked: false });
-  showScreen('enter-password');
-  var passEl = getEl('unlock-password');
-  if(passEl) passEl.value = "";
+  currentWalletId = null;
+  var passIn = getEl('unlock-pass');
+  var errEl = getEl('unlock-error');
+  if(passIn) passIn.value = '';
+  if(errEl) errEl.innerText = '';
+  showScreen('lock-screen');
+  saveData();
 }
 
-function updateDashboard() {
-  var addrEl = getEl('display-address');
-  var balEl = getEl('display-balance');
-  if(addrEl) addrEl.innerText = walletAddress;
-  if(balEl) balEl.innerText = "1000.00 XOS";
-}
-
-function sendTransaction() {
-  var toEl = getEl('recipient-address');
-  var amountEl = getEl('send-amount');
+function unlockWallet() {
+  var passInput = getEl('unlock-pass').value;
+  var errorEl = getEl('unlock-error');
   
-  if (!toEl || !amountEl) return;
-  
-  var to = toEl.value;
-  var amount = amountEl.value;
-  
-  if (!to || !amount) {
-    alert("Please fill in all fields");
+  if (!passInput) {
+    if(errorEl) errorEl.innerText = 'Enter password';
     return;
   }
   
-  alert("Transaction Sent!\nTo: " + to + "\nAmount: " + amount + " XOS");
-  toEl.value = "";
-  amountEl.value = "";
+  var foundWallet = null;
+  for(var i=0; i<wallets.length; i++) {
+    if(wallets[i].password === passInput) {
+      foundWallet = wallets[i];
+      break;
+    }
+  }
+  
+  if (foundWallet) {
+    currentWalletId = foundWallet.id;
+    saveData();
+    updateDashboard();
+    showScreen('dashboard-screen');
+  } else {
+    if(errorEl) errorEl.innerText = 'Incorrect password!';
+  }
 }
 
-function goBack() {
-  showScreen('welcome');
+function updateDashboard() {
+  if (!currentWalletId) return;
+  
+  var wallet = null;
+  for (var i = 0; i < wallets.length; i++) {
+    if (wallets[i].id === currentWalletId) { wallet = wallets[i]; break; }
+  }
+  if (!wallet) return;
+  
+  // Get data for CURRENT network only
+  var netData = wallet.networks[currentNetwork];
+  if(!netData) {
+    // Fallback if network data missing
+    netData = { balance: 0, address: '...', txs: [], symbol: 'UNK' };
+  }
+
+  // Update Network Selector UI
+  var netSelector = getEl('network-selector');
+  if(netSelector) netSelector.value = currentNetwork;
+
+  // Update Wallet Selector UI
+  var walSelector = getEl('wallet-selector');
+  if(walSelector) {
+    walSelector.innerHTML = '';
+    for (var j = 0; j < wallets.length; j++) {
+      var w = wallets[j];
+      var opt = document.createElement('option');
+      opt.value = w.id;
+      opt.innerText = w.name;
+      if (w.id === currentWalletId) opt.selected = true;
+      walSelector.appendChild(opt);
+    }
+  }
+
+  // UPDATE BALANCE & SYMBOL (Fixed)
+  var balEl = getEl('balance-display');
+  if(balEl) {
+    balEl.innerText = netData.balance.toFixed(4);
+    // Update the text next to balance to show correct symbol (ETH, BNB, XOR)
+    var symSpan = balEl.parentElement.querySelector('.currency-symbol');
+    if(symSpan) symSpan.innerText = netData.symbol;
+  }
+
+  // Update Address
+  var addrEl = getEl('address-display');
+  var recvAddrEl = getEl('receive-addr');
+  if(addrEl) addrEl.innerText = netData.address;
+  if(recvAddrEl) recvAddrEl.innerText = netData.address;
+
+  // Update Network Name Display
+  var netNameEl = getEl('network-name');
+  if(netNameEl) netNameEl.innerText = currentNetwork.toUpperCase().replace('-', ' ');
+
+  // Update Transaction History
+  var list = getEl('tx-list');
+  if(list) {
+    list.innerHTML = '';
+    if (!netData.txs || netData.txs.length === 0) {
+      list.innerHTML = '<li style="text-align:center;color:var(--sub);font-size:12px;padding:10px;">No transactions</li>';
+    } else {
+      for (var k = netData.txs.length - 1; k >= 0; k--) {
+        var tx = netData.txs[k];
+        var li = document.createElement('li');
+        li.className = 'tx-item';
+        var sign = (tx.type === 'Sent') ? '-' : '+';
+        li.innerHTML = '<div class="tx-head"><span>' + tx.type + '</span><span>' + sign + tx.amount + ' ' + netData.symbol + '</span></div><div class="tx-det">' + (tx.to || 'Received') + '</div>';
+        list.appendChild(li);
+      }
+    }
+  }
+  
+  // Refresh QR if on receive screen
+  var qrContainer = getEl('qrcode');
+  if(qrContainer && qrContainer.innerHTML !== '') generateQR();
+}
+
+function copyAddress() {
+  var wallet = null;
+  for (var i = 0; i < wallets.length; i++) {
+    if (wallets[i].id === currentWalletId) { wallet = wallets[i]; break; }
+  }
+  if(!wallet) return;
+  var addr = wallet.networks[currentNetwork].address;
+  
+  var tempInput = document.createElement("input");
+  tempInput.value = addr;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand("copy");
+  document.body.removeChild(tempInput);
+  
+  alert('Address Copied!');
+}
+
+function generateQR() {
+  var container = getEl('qrcode');
+  if(!container) return;
+  container.innerHTML = '';
+  
+  var wallet = null;
+  for (var i = 0; i < wallets.length; i++) {
+    if (wallets[i].id === currentWalletId) { wallet = wallets[i]; break; }
+  }
+  if(!wallet) return;
+  
+  var addr = wallet.networks[currentNetwork].address;
+  
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(container, {
+      text: addr,
+      width: 180,
+      height: 180,
+      colorDark : "#000000",
+      colorLight : "#ffffff",
+      correctLevel : QRCode.CorrectLevel.H
+    });
+  } else {
+    container.innerText = "QR Library not loaded";
+  }
+}
+
+function sendTransaction() {
+  var to = getEl('send-to').value;
+  var amtVal = getEl('send-amt').value;
+  var amt = parseFloat(amtVal);
+  
+  var wallet = null;
+  for (var i = 0; i < wallets.length; i++) {
+    if (wallets[i].id === currentWalletId) { wallet = wallets[i]; break; }
+  }
+  if(!wallet) return;
+  
+  var netData = wallet.networks[currentNetwork];
+
+  if (!to || !amt || amt <= 0) { alert('Invalid details'); return; }
+  if (amt > netData.balance) { alert('Insufficient balance'); return; }
+
+  netData.balance -= amt;
+  netData.txs.push({ type: 'Sent', amount: amt, to: to, date: Date.now() });
+
+  setTimeout(function() {
+    netData.txs.push({ type: 'Received', amount: (amt * 0.01), to: 'Cashback', date: Date.now() });
+    netData.balance += (amt * 0.01);
+    saveData();
+    updateDashboard();
+    alert('Transaction Successful!');
+    var sTo = getEl('send-to');
+    var sAmt = getEl('send-amt');
+    if(sTo) sTo.value = '';
+    if(sAmt) sAmt.value = '';
+  }, 1000);
+
+  saveData();
+  updateDashboard();
 }

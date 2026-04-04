@@ -1,9 +1,9 @@
-{
+﻿{
   "manifest_version": 3,
   "name": "XOS Wallet",
-  "version": "1.0.0",
-  "description": "Simple Web3 Wallet for XOS",
-  "permissions": ["storage"],
+  "version": "2.0.0",
+  "description": "Multi-Chain Web3 Wallet with QR & Dark Mode",
+  "permissions": ["storage", "clipboardWrite"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "XOS Wallet"

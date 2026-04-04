@@ -2,8 +2,8 @@
 members = [".", "xos-scheme", "xos-gui", "xos-storage", "xos-governance"]
 
 [package]
-name = "xos-sdk"
-version = "1.0.0"
+name = "xorion-web3-sdk"
+version = "2.0.0"
 edition = "2021"
 description = "X-OS Web3 SDK"
 license = "MIT"
@@ -42,3 +42,12 @@ tempfile = "3"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+description = "Xorion Web3 SDK - Multi-chain wallet and dApp development toolkit"
+license = "MIT"
+repository = "https://github.com/IDevNation/Xorion-Web3-Beta-Multi-Chain-Wallet-SDK"
+homepage = "https://github.com/IDevNation/Xorion-Web3-Beta-Multi-Chain-Wallet-SDK"
+documentation = "https://docs.rs/xorion-web3-sdk"
+keywords = ["web3", "blockchain", "wallet", "crypto", "multi-chain"]
+categories = ["cryptography", "web-programming"]
+

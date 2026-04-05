@@ -7,7 +7,7 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use xos_sdk::Wallet;
+//! use crate::Wallet;
 //!
 //! let wallet = Wallet::from_mnemonic(
 //!     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
